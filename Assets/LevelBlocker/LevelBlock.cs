@@ -11,9 +11,6 @@ public class LevelBlock : MonoBehaviour
     };
 }
 
-// Investigate
-// https://docs.unity3d.com/ScriptReference/SerializedProperty.html
-// https://docs.unity3d.com/ScriptReference/ScriptableObject.html 
 [CustomEditor(typeof(LevelBlock))]
 public class LevelBlockEditor : Editor
 {
@@ -27,23 +24,28 @@ public class LevelBlockEditor : Editor
     {
         serializedObject.Update();
 
-        var t = target as LevelBlock;
-        var tr = t.transform;
-        var pos = tr.position;
+        LevelBlock block = target as LevelBlock;
+        Transform blockTransform = block.transform;
+        Vector3 blockPosition = block.transform.position;
+
+        Vector3[] worldPositionPoints = new Vector3[points.arraySize];
 
         Handles.color = Color.red;
         for (int i = 0; i < points.arraySize; i++) {
             EditorGUI.BeginChangeCheck();
-            Vector3 newPointPosition = Handles.Slider2D(pos + points.GetArrayElementAtIndex(i).vector3Value, tr.up, tr.forward, tr.right, 0.1f, Handles.CubeHandleCap, 1f);
+            
+            Vector3 newPointPosition = Handles.Slider2D(blockPosition + points.GetArrayElementAtIndex(i).vector3Value, blockTransform.up, blockTransform.forward, blockTransform.right, 0.1f, Handles.CubeHandleCap, 1f);
+            worldPositionPoints[i] = newPointPosition;
+
             if (EditorGUI.EndChangeCheck())
             {
-                Undo.RecordObject(t, "Change Point Position");
-                points.GetArrayElementAtIndex(i).vector3Value = newPointPosition;
+                Undo.RecordObject(block, "Change Point Position");
+                points.GetArrayElementAtIndex(i).vector3Value = newPointPosition - blockPosition;
             }
         }
 
         Handles.color = new Color(1f, 0f, 0f, 0.4f);
-        Handles.DrawAAConvexPolygon(t.points);
+        Handles.DrawAAConvexPolygon(worldPositionPoints);
 
         serializedObject.ApplyModifiedProperties();
     }
