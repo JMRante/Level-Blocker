@@ -152,6 +152,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dd7383fe6ab199d40bf82e19241ed3f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  height: 1
   points:
   - {x: 2, y: 0, z: 2}
   - {x: 2, y: 0, z: -2}
@@ -456,6 +457,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dd7383fe6ab199d40bf82e19241ed3f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  height: 1
   points:
   - {x: 6, y: 0, z: 0}
   - {x: 9, y: 0, z: -9}
@@ -554,17 +556,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dd7383fe6ab199d40bf82e19241ed3f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  height: 4
   points:
-  - {x: 4, y: 0, z: 11}
-  - {x: 8, y: 0, z: 6}
-  - {x: 6, y: 0, z: 1}
-  - {x: 8, y: 0, z: -1}
+  - {x: 3, y: 0, z: 8}
+  - {x: 3, y: 0, z: 13}
+  - {x: -4, y: 0, z: 16}
+  - {x: -3, y: 0, z: 22}
+  - {x: -10, y: 0, z: 23}
+  - {x: -8, y: 0, z: 27}
+  - {x: 2, y: 0, z: 30}
+  - {x: 10, y: 0, z: 22}
+  - {x: 11, y: 0, z: 15}
+  - {x: 13, y: 0, z: 8}
+  - {x: 15, y: 0, z: 1}
+  - {x: 11, y: 0, z: -1}
   - {x: 6, y: 0, z: -6}
-  - {x: 0, y: 0, z: -8}
-  - {x: -4, y: 0, z: 0}
-  - {x: -12, y: 0, z: 2}
-  - {x: -4, y: 0, z: 8}
-  - {x: 1, y: 0, z: 8}
+  - {x: -1, y: 0, z: -6}
+  - {x: -6, y: 0, z: -12}
+  - {x: -9, y: 0, z: -1}
+  - {x: -5, y: 0, z: 4}
+  - {x: 0, y: 0, z: 5}
 --- !u!4 &1036194003
 Transform:
   m_ObjectHideFlags: 0

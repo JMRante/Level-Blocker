@@ -3,6 +3,8 @@ using UnityEditor;
 
 public class LevelBlock : MonoBehaviour
 {
+    public float height = 1f;
+
     public Vector3[] points = new Vector3[] {
         new Vector3(2f, 0f, 2f),
         new Vector3(2f, 0f, -2f),
@@ -14,9 +16,11 @@ public class LevelBlock : MonoBehaviour
 [CustomEditor(typeof(LevelBlock))]
 public class LevelBlockEditor : Editor
 {
+    private SerializedProperty height;
     private SerializedProperty points;
 
     public void OnEnable() {
+        height = serializedObject.FindProperty("height");
         points = serializedObject.FindProperty("points");
     }
 
@@ -29,49 +33,61 @@ public class LevelBlockEditor : Editor
         Transform blockTransform = block.transform;
         Vector3 blockPosition = block.transform.position;
 
-        Vector3[] worldPositionPoints = new Vector3[points.arraySize + 1];
+        // Create and draw handles for both bottom and top of level block
+        for (int i = 0; i <= 1; i++) {
+            Vector3 heightOffset = i == 0 ? Vector3.zero : Vector3.up * height.floatValue;
 
-        // For checking if a split happened
-        int newSplitIndex = -1;
-        Vector3 newSplitPoint = Vector3.zero;
+            Vector3[] worldPositionPoints = new Vector3[points.arraySize + 1];
 
-        // Iterate through all block points, drawing and checking their handles
-        for (int i = 0; i < points.arraySize; i++) {
-            EditorGUI.BeginChangeCheck();
-                    
-            Handles.color = Color.red;
-            Vector3 newPointPosition = Handles.Slider2D(blockPosition + points.GetArrayElementAtIndex(i).vector3Value, blockTransform.up, blockTransform.forward, blockTransform.right, 0.3f, Handles.CubeHandleCap, 1f);
-            worldPositionPoints[i] = newPointPosition;
+            // For checking if a split happened
+            int newSplitIndex = -1;
+            Vector3 newSplitPoint = Vector3.zero;
 
-            if (i == 0) {
-                // Add first point again to loop polyline
-                worldPositionPoints[points.arraySize] = newPointPosition;
+            // Iterate through all block points, drawing and checking their handles
+            for (int j = 0; j < points.arraySize; j++) {
+                // Point position handles
+                EditorGUI.BeginChangeCheck();
+                        
+                Handles.color = Color.red;
+                Vector3 newPointPosition = Handles.Slider2D(blockPosition + heightOffset + points.GetArrayElementAtIndex(j).vector3Value, blockTransform.up, blockTransform.forward, blockTransform.right, 0.3f, Handles.CubeHandleCap, 1f);
+                worldPositionPoints[j] = newPointPosition;
+
+                if (j == 0) {
+                    // Add first point again to loop polyline
+                    worldPositionPoints[points.arraySize] = newPointPosition;
+                }
+
+                // Once done drawing and storing points at height offset, restore before offset to serialize the value in 2D at the base of the block
+                newPointPosition -= heightOffset;
+
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(block, "Change Point Position");
+                    points.GetArrayElementAtIndex(j).vector3Value = newPointPosition - blockPosition;
+                }
+
+                // Line split handles
+                Handles.color = Color.blue;
+                int nextPointIndex = j < points.arraySize - 1 ? j + 1 : 0;
+                Vector3 splitPointPosition = Vector3.Lerp(points.GetArrayElementAtIndex(nextPointIndex).vector3Value, points.GetArrayElementAtIndex(j).vector3Value, 0.5f);
+                
+                if (Handles.Button(blockPosition + heightOffset + splitPointPosition, Quaternion.identity, 0.2f, 0.2f, Handles.SphereHandleCap)) {
+                    Undo.RecordObject(block, "Split Between Two Points");
+                    newSplitIndex = nextPointIndex;
+                    newSplitPoint = splitPointPosition;
+                }
             }
 
-            if (EditorGUI.EndChangeCheck())
-            {
-                Undo.RecordObject(block, "Change Point Position");
-                points.GetArrayElementAtIndex(i).vector3Value = newPointPosition - blockPosition;
+            // If a split occured, apply it after the loop through of points
+            if (newSplitIndex != -1) {
+                points.InsertArrayElementAtIndex(newSplitIndex);
+                points.GetArrayElementAtIndex(newSplitIndex).vector3Value = newSplitPoint;
             }
 
-            Handles.color = Color.blue;
-            int nextPointIndex = i < points.arraySize - 1 ? i + 1 : 0;
-            Vector3 splitPointPosition = Vector3.Lerp(points.GetArrayElementAtIndex(nextPointIndex).vector3Value, points.GetArrayElementAtIndex(i).vector3Value, 0.5f);
-            
-            if (Handles.Button(blockPosition + splitPointPosition, Quaternion.identity, 0.2f, 0.2f, Handles.SphereHandleCap)) {
-                Undo.RecordObject(block, "Split Between Two Points");
-                newSplitIndex = nextPointIndex;
-                newSplitPoint = splitPointPosition;
-            }
+            // Draw outline of shape the points create
+            Handles.color = new Color(1f, 0f, 0f, 0.4f);
+            Handles.DrawAAPolyLine(10f, worldPositionPoints);
         }
-
-        if (newSplitIndex != -1) {
-            points.InsertArrayElementAtIndex(newSplitIndex);
-            points.GetArrayElementAtIndex(newSplitIndex).vector3Value = newSplitPoint;
-        }
-
-        Handles.color = new Color(1f, 0f, 0f, 0.4f);
-        Handles.DrawAAPolyLine(10f, worldPositionPoints);
 
         serializedObject.ApplyModifiedProperties();
     }
