@@ -555,10 +555,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   points:
-  - {x: 2, y: 0, z: 2}
-  - {x: 2, y: 0, z: -2}
-  - {x: -2, y: 0, z: -2}
-  - {x: -2, y: 0, z: 2}
+  - {x: 4, y: 0, z: 11}
+  - {x: 8, y: 0, z: 6}
+  - {x: 6, y: 0, z: 1}
+  - {x: 8, y: 0, z: -1}
+  - {x: 6, y: 0, z: -6}
+  - {x: 0, y: 0, z: -8}
+  - {x: -4, y: 0, z: 0}
+  - {x: -12, y: 0, z: 2}
+  - {x: -4, y: 0, z: 8}
+  - {x: 1, y: 0, z: 8}
 --- !u!4 &1036194003
 Transform:
   m_ObjectHideFlags: 0
@@ -567,7 +573,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1036194001}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -6.25, y: 0, z: 0}
+  m_LocalPosition: {x: -6, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
