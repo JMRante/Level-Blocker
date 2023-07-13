@@ -17,6 +17,8 @@ public class LevelBlock : MonoBehaviour
 [CustomEditor(typeof(LevelBlock))]
 public class LevelBlockEditor : Editor
 {
+    private const float MIN_HEIGHT = 0.2f;
+
     private SerializedProperty bottomHeight;
     private SerializedProperty topHeight;
 
@@ -37,6 +39,9 @@ public class LevelBlockEditor : Editor
         LevelBlock block = target as LevelBlock;
         Transform blockTransform = block.transform;
         Vector3 blockPosition = block.transform.position;
+
+        // For setting position of height handles
+        Vector3 centerOfMass = Vector3.zero;
 
         // Create and draw handles for both bottom and top of level block
         for (int i = 0; i <= 1; i++) {
@@ -81,7 +86,12 @@ public class LevelBlockEditor : Editor
                     newSplitIndex = nextPointIndex;
                     newSplitPoint = splitPointPosition;
                 }
-            }
+
+                // Only count points to center of mass once
+                if (i == 0) {
+                    centerOfMass += points.GetArrayElementAtIndex(j).vector3Value;
+                }
+            } 
 
             // If a split occured, apply it after the loop through of points
             if (newSplitIndex != -1) {
@@ -92,6 +102,34 @@ public class LevelBlockEditor : Editor
             // Draw outline of shape the points create
             Handles.color = new Color(1f, 0f, 0f, 0.4f);
             Handles.DrawAAPolyLine(10f, worldPositionPoints);
+        }
+
+        // Prepare to render height sliders
+        Handles.color = Color.magenta;
+        centerOfMass = centerOfMass / (float) points.arraySize;
+        centerOfMass.y = blockPosition.y;
+        Vector3 blockPositionNoY = new Vector3(blockPosition.x, 0f, blockPosition.z);
+
+        // Bottom height slider
+        EditorGUI.BeginChangeCheck();
+        Vector3 newBottomPosition = Handles.Slider(centerOfMass + blockPositionNoY + (Vector3.up * bottomHeight.floatValue), Vector3.down, 3f, Handles.ArrowHandleCap, 1f);
+        float newBottomHeight = newBottomPosition.y > topHeight.floatValue - MIN_HEIGHT ? topHeight.floatValue - MIN_HEIGHT : newBottomPosition.y;
+
+        if (EditorGUI.EndChangeCheck())
+        {
+            Undo.RecordObject(target, "Change Bottom Height");
+            bottomHeight.floatValue = newBottomHeight;
+        }
+
+        // Top height slider
+        EditorGUI.BeginChangeCheck();
+        Vector3 newTopPosition = Handles.Slider(centerOfMass + blockPositionNoY + (Vector3.up * topHeight.floatValue), Vector3.up, 3f, Handles.ArrowHandleCap, 1f);
+        float newTopHeight = newTopPosition.y < bottomHeight.floatValue + MIN_HEIGHT ? bottomHeight.floatValue + MIN_HEIGHT : newTopPosition.y;
+
+        if (EditorGUI.EndChangeCheck())
+        {
+            Undo.RecordObject(target, "Change Top Height");
+            topHeight.floatValue = newTopHeight;
         }
 
         serializedObject.ApplyModifiedProperties();
