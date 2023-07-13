@@ -3,7 +3,8 @@ using UnityEditor;
 
 public class LevelBlock : MonoBehaviour
 {
-    public float height = 1f;
+    public float bottomHeight = -2f; 
+    public float topHeight = 2f;
 
     public Vector3[] points = new Vector3[] {
         new Vector3(2f, 0f, 2f),
@@ -16,11 +17,15 @@ public class LevelBlock : MonoBehaviour
 [CustomEditor(typeof(LevelBlock))]
 public class LevelBlockEditor : Editor
 {
-    private SerializedProperty height;
+    private SerializedProperty bottomHeight;
+    private SerializedProperty topHeight;
+
     private SerializedProperty points;
 
     public void OnEnable() {
-        height = serializedObject.FindProperty("height");
+        bottomHeight = serializedObject.FindProperty("bottomHeight");
+        topHeight = serializedObject.FindProperty("topHeight");
+
         points = serializedObject.FindProperty("points");
     }
 
@@ -35,7 +40,7 @@ public class LevelBlockEditor : Editor
 
         // Create and draw handles for both bottom and top of level block
         for (int i = 0; i <= 1; i++) {
-            Vector3 heightOffset = i == 0 ? Vector3.zero : Vector3.up * height.floatValue;
+            Vector3 heightOffset = i == 0 ? Vector3.up * bottomHeight.floatValue : Vector3.up * topHeight.floatValue;
 
             Vector3[] worldPositionPoints = new Vector3[points.arraySize + 1];
 
