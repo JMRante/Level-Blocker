@@ -49,6 +49,11 @@ public class LevelBlockEditor : Editor
 
             Vector3[] worldPositionPoints = new Vector3[points.arraySize + 1];
 
+            // For checking if a merge happened
+            int newMergeIndexA = -1;
+            int newMergeIndexB = -1;
+            Vector3 newMergePoint = Vector3.zero;
+
             // For checking if a split happened
             int newSplitIndex = -1;
             Vector3 newSplitPoint = Vector3.zero;
@@ -76,22 +81,48 @@ public class LevelBlockEditor : Editor
                     points.GetArrayElementAtIndex(j).vector3Value = newPointPosition - blockPosition;
                 }
 
+                // Calculate values for merge and split
+                int nextPointIndex = j < points.arraySize - 1 ? j + 1 : 0;
+                Vector3 midPointPosition = Vector3.Lerp(points.GetArrayElementAtIndex(nextPointIndex).vector3Value, points.GetArrayElementAtIndex(j).vector3Value, 0.5f);
+
+                // Line merge handles
+                Handles.color = Color.green;
+
+                if (Handles.Button(blockPosition + heightOffset + midPointPosition + (Vector3.up * 0.25f), Quaternion.Euler(90f, 0f, 0f), 0.15f, 0.15f, Handles.ConeHandleCap)) {
+                    Undo.RecordObject(block, "Merge Between Two Points");
+                    newMergeIndexA = j;
+                    newMergeIndexB = nextPointIndex;
+                    newMergePoint = midPointPosition;
+                }                
+
                 // Line split handles
                 Handles.color = Color.blue;
-                int nextPointIndex = j < points.arraySize - 1 ? j + 1 : 0;
-                Vector3 splitPointPosition = Vector3.Lerp(points.GetArrayElementAtIndex(nextPointIndex).vector3Value, points.GetArrayElementAtIndex(j).vector3Value, 0.5f);
                 
-                if (Handles.Button(blockPosition + heightOffset + splitPointPosition, Quaternion.identity, 0.2f, 0.2f, Handles.SphereHandleCap)) {
+                if (Handles.Button(blockPosition + heightOffset + midPointPosition, Quaternion.identity, 0.2f, 0.2f, Handles.SphereHandleCap)) {
                     Undo.RecordObject(block, "Split Between Two Points");
                     newSplitIndex = nextPointIndex;
-                    newSplitPoint = splitPointPosition;
+                    newSplitPoint = midPointPosition;
                 }
 
                 // Only count points to center of mass once
                 if (i == 0) {
                     centerOfMass += points.GetArrayElementAtIndex(j).vector3Value;
                 }
+
+                Handles.color = Color.black;
+                Handles.Label(blockPosition + heightOffset + points.GetArrayElementAtIndex(j).vector3Value, j.ToString());
             } 
+
+            // If a merge occured, apply it after the loop through of points
+            if (newMergeIndexA != -1 && newMergeIndexB != -1 && points.arraySize > 3) {
+                int mergedPointIndex = newMergeIndexB > newMergeIndexA ? newMergeIndexB : newMergeIndexA;
+
+                points.InsertArrayElementAtIndex(mergedPointIndex);
+                points.GetArrayElementAtIndex(mergedPointIndex).vector3Value = newMergePoint;
+
+                points.DeleteArrayElementAtIndex(newMergeIndexB > newMergeIndexA ? newMergeIndexA : newMergeIndexA + 1);
+                points.DeleteArrayElementAtIndex(newMergeIndexB);
+            }
 
             // If a split occured, apply it after the loop through of points
             if (newSplitIndex != -1) {
