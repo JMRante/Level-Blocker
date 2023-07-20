@@ -11,7 +11,7 @@ using static Unity.Mathematics.math;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class LevelBlock : MonoBehaviour
 {
-    public bool dirtyRender = true;
+    public bool dirtyMesh = true;
 
     public float bottomHeight = -2f; 
     public float topHeight = 2f;
@@ -24,7 +24,7 @@ public class LevelBlock : MonoBehaviour
     };
 
     void Update() {
-        if (dirtyRender) {
+        if (dirtyMesh) {
             // Mesh data sizes
             int vertexAttributeCount = 3;
             int vertexCount = points.Length * 2;
@@ -107,7 +107,7 @@ public class LevelBlock : MonoBehaviour
 
             GetComponent<MeshFilter>().mesh = mesh;
 
-            dirtyRender = false;
+            dirtyMesh = false;
         }
 	}
 }
@@ -177,6 +177,7 @@ public class LevelBlockEditor : Editor
                 {
                     Undo.RecordObject(block, "Change Point Position");
                     points.GetArrayElementAtIndex(j).vector3Value = newPointPosition - blockPosition;
+                    block.dirtyMesh = true;
                 }
 
                 // Calculate values for merge and split
@@ -220,12 +221,14 @@ public class LevelBlockEditor : Editor
 
                 points.DeleteArrayElementAtIndex(newMergeIndexB > newMergeIndexA ? newMergeIndexA : newMergeIndexA + 1);
                 points.DeleteArrayElementAtIndex(newMergeIndexB);
+                block.dirtyMesh = true;
             }
 
             // If a split occured, apply it after the loop through of points
             if (newSplitIndex != -1) {
                 points.InsertArrayElementAtIndex(newSplitIndex);
                 points.GetArrayElementAtIndex(newSplitIndex).vector3Value = newSplitPoint;
+                block.dirtyMesh = true;
             }
 
             // Draw outline of shape the points create
@@ -248,6 +251,7 @@ public class LevelBlockEditor : Editor
         {
             Undo.RecordObject(target, "Change Bottom Height");
             bottomHeight.floatValue = newBottomHeight;
+            block.dirtyMesh = true;
         }
 
         // Top height slider
@@ -259,6 +263,7 @@ public class LevelBlockEditor : Editor
         {
             Undo.RecordObject(target, "Change Top Height");
             topHeight.floatValue = newTopHeight;
+            block.dirtyMesh = true;
         }
 
         serializedObject.ApplyModifiedProperties();
