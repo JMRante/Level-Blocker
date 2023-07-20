@@ -3,6 +3,7 @@ using UnityEditor;
 using Unity.Collections;
 using UnityEngine.Rendering;
 using Unity.Mathematics;
+using System;
 
 using static Unity.Mathematics.math;
 
@@ -24,10 +25,12 @@ public class LevelBlock : MonoBehaviour
 
     void Update() {
         if (dirtyRender) {
-            int vertexAttributeCount = 4;
-            int vertexCount = 4;
-            int triangleIndexCount = 6;
+            // Mesh data sizes
+            int vertexAttributeCount = 3;
+            int vertexCount = points.Length * 2;
+            int triangleIndexCount = points.Length * 6;
 
+            // Mesh data schema creation and allocation
             Mesh.MeshDataArray meshDataArray = Mesh.AllocateWritableMeshData(1);
             Mesh.MeshData meshData = meshDataArray[0];
 
@@ -37,43 +40,66 @@ public class LevelBlock : MonoBehaviour
 
             vertexAttributes[0] = new VertexAttributeDescriptor(VertexAttribute.Position, dimension: 3, stream: 0);
             vertexAttributes[1] = new VertexAttributeDescriptor(VertexAttribute.Normal, dimension: 3, stream: 1);
-            vertexAttributes[2] = new VertexAttributeDescriptor(VertexAttribute.Tangent, dimension: 4, stream: 2);
-            vertexAttributes[3] = new VertexAttributeDescriptor(VertexAttribute.TexCoord0, dimension: 2, stream: 3);
+            vertexAttributes[2] = new VertexAttributeDescriptor(VertexAttribute.Tangent, VertexAttributeFormat.Float16, 4, 2);
 
             meshData.SetVertexBufferParams(vertexCount, vertexAttributes);
 		    vertexAttributes.Dispose();
 
+            half h0 = half(0f);
+            half h1 = half(1f);
+
+            // Set mesh data per point
             NativeArray<float3> positions = meshData.GetVertexData<float3>();
-            positions[0] = 0f;
-            positions[1] = right();
-            positions[2] = up();
-            positions[3] = float3(1f, 1f, 0f);
-
             NativeArray<float3> normals = meshData.GetVertexData<float3>(1);
-            normals[0] = normals[1] = normals[2] = normals[3] = back();
-
-            NativeArray<float4> tangents = meshData.GetVertexData<float4>(2);
-            tangents[0] = tangents[1] = tangents[2] = tangents[3] = float4(1f, 0f, 0f, -1f);
-
-            NativeArray<float2> texCoords = meshData.GetVertexData<float2>(3);
-            texCoords[0] = 0f;
-            texCoords[1] = float2(1f, 0f);
-            texCoords[2] = float2(0f, 1f);
-            texCoords[3] = 1f;
-
+            NativeArray<half4> tangents = meshData.GetVertexData<half4>(2);
             meshData.SetIndexBufferParams(triangleIndexCount, IndexFormat.UInt16);
             NativeArray<ushort> triangleIndices = meshData.GetIndexData<ushort>();
-            triangleIndices[0] = 0;
-            triangleIndices[1] = 2;
-            triangleIndices[2] = 1;
-            triangleIndices[3] = 1;
-            triangleIndices[4] = 2;
-            triangleIndices[5] = 3;
+
+            for (int i = 0; i < points.Length; i++) {
+                int baseIndex = i * 2;
+                int baseTriangleIndex = i * 6;
+                
+                // Set position data
+                Vector3 bottomPoint = transform.position + (Vector3.up * bottomHeight) + points[i];
+                Vector3 topPoint = transform.position + (Vector3.up * topHeight) + points[i];
+                // Vector3 nextBottomPoint = transform.position + (Vector3.up * bottomHeight) + points[(i + 1) % points.Length];
+                // Vector3 nextTopPoint = transform.position + (Vector3.up * topHeight) + points[(i + 1) % points.Length];
+
+                positions[baseIndex] = bottomPoint;
+                positions[baseIndex + 1] = topPoint;
+
+                // Set normal data
+                // Vector3 triCrossProduct = Vector3.Cross(nextTopPoint - topPoint, topPoint - bottomPoint);
+                // Vector3 normal = triCrossProduct.normalized;
+
+                normals[baseIndex] = back();
+                normals[baseIndex + 1] = back();
+
+                // Set tangent data
+                // Vector3 normalAndTriCrossProduct = Vector3.Cross(topPoint - bottomPoint, normal);
+
+                tangents[baseIndex] = half4(h1, h0, h0, half(-1f));
+                tangents[baseIndex + 1] = half4(h1, h0, h0, half(-1f));
+
+                // Set triangle index data
+                triangleIndices[baseTriangleIndex] = Convert.ToUInt16((2 * i) % vertexCount);
+                triangleIndices[baseTriangleIndex + 1] = Convert.ToUInt16(((2 * i) + 2) % vertexCount);
+                triangleIndices[baseTriangleIndex + 2] = Convert.ToUInt16(((2 * i) + 1) % vertexCount);
+                triangleIndices[baseTriangleIndex + 3] = Convert.ToUInt16(((2 * i) + 2) % vertexCount);
+                triangleIndices[baseTriangleIndex + 4] = Convert.ToUInt16(((2 * i) + 3) % vertexCount);
+                triangleIndices[baseTriangleIndex + 5] = Convert.ToUInt16(((2 * i) + 1) % vertexCount);
+            }
+
+            Bounds bounds = new Bounds(new Vector3(0.5f, 0.5f), new Vector3(1f, 1f));
 
             meshData.subMeshCount = 1;
-            meshData.SetSubMesh(0, new SubMeshDescriptor(0, triangleIndexCount));
+            meshData.SetSubMesh(0, new SubMeshDescriptor(0, triangleIndexCount){
+			    bounds = bounds,
+			    vertexCount = vertexCount
+            }, MeshUpdateFlags.DontRecalculateBounds);
 
             Mesh mesh = new Mesh {
+                bounds = bounds,
                 name = gameObject.name + " Level Block Mesh"
             };
 
