@@ -9,12 +9,14 @@ using static Unity.Mathematics.math;
 
 [ExecuteInEditMode]
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
-public class LevelBlock : MonoBehaviour
-{
+public class LevelBlock : MonoBehaviour {
     public bool dirtyMesh = true;
 
     public float bottomHeight = -2f; 
     public float topHeight = 2f;
+
+    private Vector2 xBounds = new Vector2(-2, 2);
+    private Vector2 zBounds = new Vector2(-2, 2);
 
     public Vector3[] points = new Vector3[] {
         new Vector3(2f, 0f, 2f),
@@ -60,8 +62,8 @@ public class LevelBlock : MonoBehaviour
                 int baseTriangleIndex = i * 6;
                 
                 // Set position data
-                Vector3 bottomPoint = transform.position + (Vector3.up * bottomHeight) + points[i];
-                Vector3 topPoint = transform.position + (Vector3.up * topHeight) + points[i];
+                Vector3 bottomPoint = (Vector3.up * bottomHeight) + points[i];
+                Vector3 topPoint = (Vector3.up * topHeight) + points[i];
                 // Vector3 nextBottomPoint = transform.position + (Vector3.up * bottomHeight) + points[(i + 1) % points.Length];
                 // Vector3 nextTopPoint = transform.position + (Vector3.up * topHeight) + points[(i + 1) % points.Length];
 
@@ -88,9 +90,15 @@ public class LevelBlock : MonoBehaviour
                 triangleIndices[baseTriangleIndex + 3] = Convert.ToUInt16(((2 * i) + 2) % vertexCount);
                 triangleIndices[baseTriangleIndex + 4] = Convert.ToUInt16(((2 * i) + 3) % vertexCount);
                 triangleIndices[baseTriangleIndex + 5] = Convert.ToUInt16(((2 * i) + 1) % vertexCount);
+
+                // Update bounds based on point
+                if (points[i].x < xBounds.x) xBounds.x = points[i].x;
+                if (points[i].x > xBounds.y) xBounds.y = points[i].x;
+                if (points[i].z < zBounds.x) zBounds.x = points[i].z;
+                if (points[i].z > zBounds.y) zBounds.y = points[i].z;
             }
 
-            Bounds bounds = new Bounds(new Vector3(0.5f, 0.5f), new Vector3(1f, 1f));
+            Bounds bounds = new Bounds(transform.position, new Vector3(xBounds.y - xBounds.x, topHeight - bottomHeight, zBounds.y - zBounds.x));
 
             meshData.subMeshCount = 1;
             meshData.SetSubMesh(0, new SubMeshDescriptor(0, triangleIndexCount){
@@ -129,8 +137,7 @@ public class LevelBlockEditor : Editor
         points = serializedObject.FindProperty("points");
     }
 
-    public void OnSceneGUI()
-    {
+    public void OnSceneGUI() {
         serializedObject.Update();
 
         // Get references to targeted level block
@@ -173,8 +180,7 @@ public class LevelBlockEditor : Editor
                 // Once done drawing and storing points at height offset, restore before offset to serialize the value in 2D at the base of the block
                 newPointPosition -= heightOffset;
 
-                if (EditorGUI.EndChangeCheck())
-                {
+                if (EditorGUI.EndChangeCheck()) {
                     Undo.RecordObject(block, "Change Point Position");
                     points.GetArrayElementAtIndex(j).vector3Value = newPointPosition - blockPosition;
                     block.dirtyMesh = true;
@@ -247,8 +253,7 @@ public class LevelBlockEditor : Editor
         Vector3 newBottomPosition = Handles.Slider(centerOfMass + blockPositionNoY + (Vector3.up * bottomHeight.floatValue), Vector3.down, 3f, Handles.ArrowHandleCap, 1f);
         float newBottomHeight = newBottomPosition.y > topHeight.floatValue - MIN_HEIGHT ? topHeight.floatValue - MIN_HEIGHT : newBottomPosition.y;
 
-        if (EditorGUI.EndChangeCheck())
-        {
+        if (EditorGUI.EndChangeCheck()) {
             Undo.RecordObject(target, "Change Bottom Height");
             bottomHeight.floatValue = newBottomHeight;
             block.dirtyMesh = true;
@@ -259,8 +264,7 @@ public class LevelBlockEditor : Editor
         Vector3 newTopPosition = Handles.Slider(centerOfMass + blockPositionNoY + (Vector3.up * topHeight.floatValue), Vector3.up, 3f, Handles.ArrowHandleCap, 1f);
         float newTopHeight = newTopPosition.y < bottomHeight.floatValue + MIN_HEIGHT ? bottomHeight.floatValue + MIN_HEIGHT : newTopPosition.y;
 
-        if (EditorGUI.EndChangeCheck())
-        {
+        if (EditorGUI.EndChangeCheck()) {
             Undo.RecordObject(target, "Change Top Height");
             topHeight.floatValue = newTopHeight;
             block.dirtyMesh = true;
