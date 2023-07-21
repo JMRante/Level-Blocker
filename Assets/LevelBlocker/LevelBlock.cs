@@ -64,24 +64,27 @@ public class LevelBlock : MonoBehaviour {
                 // Set position data
                 Vector3 bottomPoint = (Vector3.up * bottomHeight) + points[i];
                 Vector3 topPoint = (Vector3.up * topHeight) + points[i];
-                // Vector3 nextBottomPoint = transform.position + (Vector3.up * bottomHeight) + points[(i + 1) % points.Length];
-                // Vector3 nextTopPoint = transform.position + (Vector3.up * topHeight) + points[(i + 1) % points.Length];
 
                 positions[baseIndex] = bottomPoint;
                 positions[baseIndex + 1] = topPoint;
 
                 // Set normal data
-                // Vector3 triCrossProduct = Vector3.Cross(nextTopPoint - topPoint, topPoint - bottomPoint);
-                // Vector3 normal = triCrossProduct.normalized;
+                // Get vector between previous point and next point
+                Vector3 previousPoint = points[(i - 1 == -1 ? points.Length - 1 : i - 1)];
+                Vector3 nextPoint = points[(i + 1) % points.Length];
+                Vector3 transitionDirection = nextPoint - previousPoint;
 
-                normals[baseIndex] = back();
-                normals[baseIndex + 1] = back();
+                // Get left hand perpendicular vector to the above
+                Vector3 normalDirection = new Vector3(-transitionDirection.z, 0f, transitionDirection.x);
+
+                normals[baseIndex] = normalDirection.normalized;
+                normals[baseIndex + 1] = normalDirection.normalized;
 
                 // Set tangent data
-                // Vector3 normalAndTriCrossProduct = Vector3.Cross(topPoint - bottomPoint, normal);
+                Vector3 tangentDirection = Vector3.Cross(normalDirection, transitionDirection);
 
-                tangents[baseIndex] = half4(h1, h0, h0, half(-1f));
-                tangents[baseIndex + 1] = half4(h1, h0, h0, half(-1f));
+                tangents[baseIndex] = half4(half3(tangentDirection.normalized), half(-1f));
+                tangents[baseIndex + 1] = half4(half3(tangentDirection.normalized), half(-1f));
 
                 // Set triangle index data
                 triangleIndices[baseTriangleIndex] = Convert.ToUInt16((2 * i) % vertexCount);
@@ -135,6 +138,8 @@ public class LevelBlockEditor : Editor
         topHeight = serializedObject.FindProperty("topHeight");
 
         points = serializedObject.FindProperty("points");
+
+        Undo.undoRedoPerformed += UndoRedoLevelBlockCallback;
     }
 
     public void OnSceneGUI() {
@@ -147,6 +152,9 @@ public class LevelBlockEditor : Editor
 
         // For setting position of height handles
         Vector3 centerOfMass = Vector3.zero;
+
+        // Set transform matrix for Handles to be local 
+        Handles.matrix = blockTransform.localToWorldMatrix;
 
         // Create and draw handles for both bottom and top of level block
         for (int i = 0; i <= 1; i++) {
@@ -169,7 +177,7 @@ public class LevelBlockEditor : Editor
                 EditorGUI.BeginChangeCheck();
                         
                 Handles.color = Color.red;
-                Vector3 newPointPosition = Handles.Slider2D(blockPosition + heightOffset + points.GetArrayElementAtIndex(j).vector3Value, blockTransform.up, blockTransform.forward, blockTransform.right, 0.3f, Handles.CubeHandleCap, 1f);
+                Vector3 newPointPosition = Handles.Slider2D(heightOffset + points.GetArrayElementAtIndex(j).vector3Value, blockTransform.up, blockTransform.forward, blockTransform.right, 0.3f, Handles.CubeHandleCap, 1f);
                 worldPositionPoints[j] = newPointPosition;
 
                 if (j == 0) {
@@ -182,7 +190,7 @@ public class LevelBlockEditor : Editor
 
                 if (EditorGUI.EndChangeCheck()) {
                     Undo.RecordObject(block, "Change Point Position");
-                    points.GetArrayElementAtIndex(j).vector3Value = newPointPosition - blockPosition;
+                    points.GetArrayElementAtIndex(j).vector3Value = newPointPosition;
                     block.dirtyMesh = true;
                 }
 
@@ -193,7 +201,7 @@ public class LevelBlockEditor : Editor
                 // Line merge handles
                 Handles.color = Color.green;
 
-                if (Handles.Button(blockPosition + heightOffset + midPointPosition + (Vector3.up * 0.25f), Quaternion.Euler(90f, 0f, 0f), 0.15f, 0.15f, Handles.ConeHandleCap)) {
+                if (Handles.Button(heightOffset + midPointPosition + (Vector3.up * 0.25f), Quaternion.Euler(90f, 0f, 0f), 0.15f, 0.15f, Handles.ConeHandleCap)) {
                     Undo.RecordObject(block, "Merge Between Two Points");
                     newMergeIndexA = j;
                     newMergeIndexB = nextPointIndex;
@@ -203,7 +211,7 @@ public class LevelBlockEditor : Editor
                 // Line split handles
                 Handles.color = Color.blue;
                 
-                if (Handles.Button(blockPosition + heightOffset + midPointPosition, Quaternion.identity, 0.2f, 0.2f, Handles.SphereHandleCap)) {
+                if (Handles.Button(heightOffset + midPointPosition, Quaternion.identity, 0.2f, 0.2f, Handles.SphereHandleCap)) {
                     Undo.RecordObject(block, "Split Between Two Points");
                     newSplitIndex = nextPointIndex;
                     newSplitPoint = midPointPosition;
@@ -215,7 +223,7 @@ public class LevelBlockEditor : Editor
                 }
 
                 Handles.color = Color.black;
-                Handles.Label(blockPosition + heightOffset + points.GetArrayElementAtIndex(j).vector3Value, j.ToString());
+                Handles.Label(heightOffset + points.GetArrayElementAtIndex(j).vector3Value, j.ToString());
             } 
 
             // If a merge occured, apply it after the loop through of points
@@ -246,11 +254,10 @@ public class LevelBlockEditor : Editor
         Handles.color = Color.magenta;
         centerOfMass = centerOfMass / (float) points.arraySize;
         centerOfMass.y = blockPosition.y;
-        Vector3 blockPositionNoY = new Vector3(blockPosition.x, 0f, blockPosition.z);
 
         // Bottom height slider
         EditorGUI.BeginChangeCheck();
-        Vector3 newBottomPosition = Handles.Slider(centerOfMass + blockPositionNoY + (Vector3.up * bottomHeight.floatValue), Vector3.down, 3f, Handles.ArrowHandleCap, 1f);
+        Vector3 newBottomPosition = Handles.Slider(centerOfMass + (Vector3.up * bottomHeight.floatValue), Vector3.down, 3f, Handles.ArrowHandleCap, 1f);
         float newBottomHeight = newBottomPosition.y > topHeight.floatValue - MIN_HEIGHT ? topHeight.floatValue - MIN_HEIGHT : newBottomPosition.y;
 
         if (EditorGUI.EndChangeCheck()) {
@@ -261,7 +268,7 @@ public class LevelBlockEditor : Editor
 
         // Top height slider
         EditorGUI.BeginChangeCheck();
-        Vector3 newTopPosition = Handles.Slider(centerOfMass + blockPositionNoY + (Vector3.up * topHeight.floatValue), Vector3.up, 3f, Handles.ArrowHandleCap, 1f);
+        Vector3 newTopPosition = Handles.Slider(centerOfMass + (Vector3.up * topHeight.floatValue), Vector3.up, 3f, Handles.ArrowHandleCap, 1f);
         float newTopHeight = newTopPosition.y < bottomHeight.floatValue + MIN_HEIGHT ? bottomHeight.floatValue + MIN_HEIGHT : newTopPosition.y;
 
         if (EditorGUI.EndChangeCheck()) {
@@ -271,5 +278,12 @@ public class LevelBlockEditor : Editor
         }
 
         serializedObject.ApplyModifiedProperties();
+    }
+
+    void UndoRedoLevelBlockCallback()
+    {
+        Debug.Log("Undo");
+        LevelBlock block = target as LevelBlock;
+        block.dirtyMesh = true;
     }
 }
