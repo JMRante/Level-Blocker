@@ -148,7 +148,6 @@ public class LevelBlockEditor : Editor
         // Get references to targeted level block
         LevelBlock block = target as LevelBlock;
         Transform blockTransform = block.transform;
-        Vector3 blockPosition = block.transform.position;
 
         // For setting position of height handles
         Vector3 centerOfMass = Vector3.zero;
@@ -177,7 +176,7 @@ public class LevelBlockEditor : Editor
                 EditorGUI.BeginChangeCheck();
                         
                 Handles.color = Color.red;
-                Vector3 newPointPosition = Handles.Slider2D(heightOffset + points.GetArrayElementAtIndex(j).vector3Value, blockTransform.up, blockTransform.forward, blockTransform.right, 0.3f, Handles.CubeHandleCap, 1f);
+                Vector3 newPointPosition = Handles.Slider2D(heightOffset + points.GetArrayElementAtIndex(j).vector3Value, Vector3.up, Vector3.forward, Vector3.right, 0.3f, Handles.CubeHandleCap, 1f);
                 worldPositionPoints[j] = newPointPosition;
 
                 if (j == 0) {
@@ -253,7 +252,6 @@ public class LevelBlockEditor : Editor
         // Prepare to render height sliders
         Handles.color = Color.magenta;
         centerOfMass = centerOfMass / (float) points.arraySize;
-        centerOfMass.y = blockPosition.y;
 
         // Bottom height slider
         EditorGUI.BeginChangeCheck();
@@ -282,7 +280,6 @@ public class LevelBlockEditor : Editor
 
     void UndoRedoLevelBlockCallback()
     {
-        Debug.Log("Undo");
         LevelBlock block = target as LevelBlock;
         block.dirtyMesh = true;
     }

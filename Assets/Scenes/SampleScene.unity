@@ -206,7 +206,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 141916209}
-  m_Mesh: {fileID: 1249677125}
+  m_Mesh: {fileID: 1096922176}
 --- !u!114 &141916214
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -531,7 +531,7 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!43 &1249677125
+--- !u!43 &1096922176
 Mesh:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -549,7 +549,7 @@ Mesh:
     vertexCount: 8
     localAABB:
       m_Center: {x: 0, y: 0, z: 0}
-      m_Extent: {x: 9.5, y: 2, z: 14}
+      m_Extent: {x: 12.569373, y: 2, z: 15.12891}
   m_Shapes:
     vertices: []
     shapes: []
@@ -683,7 +683,7 @@ Mesh:
     m_UVInfo: 0
   m_LocalAABB:
     m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 9.5, y: 2, z: 14}
+    m_Extent: {x: 12.569373, y: 2, z: 15.12891}
   m_MeshUsageFlags: 0
   m_CookingOptions: 30
   m_BakedConvexCollisionMesh: 
