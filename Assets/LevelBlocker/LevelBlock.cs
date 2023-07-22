@@ -30,7 +30,7 @@ public class LevelBlock : MonoBehaviour {
             // Mesh data sizes
             int vertexAttributeCount = 3;
             int vertexCount = points.Length * 2;
-            int triangleIndexCount = points.Length * 6;
+            int triangleIndexCount = (points.Length * 6) + ((points.Length - 2) * 3 * 2); // Side triangle count first, then top triangle count doubled to include bottom
 
             // Mesh data schema creation and allocation
             Mesh.MeshDataArray meshDataArray = Mesh.AllocateWritableMeshData(1);
@@ -59,7 +59,8 @@ public class LevelBlock : MonoBehaviour {
 
             for (int i = 0; i < points.Length; i++) {
                 int baseIndex = i * 2;
-                int baseTriangleIndex = i * 6;
+                int baseSideTriangleIndex = i * 6;
+                int baseCapTriangleIndex = (points.Length * 6) + ((i - 2) * 3 * 2);
                 
                 // Set position data
                 Vector3 bottomPoint = (Vector3.up * bottomHeight) + points[i];
@@ -77,8 +78,8 @@ public class LevelBlock : MonoBehaviour {
                 // Get left hand perpendicular vector to the above
                 Vector3 normalDirection = new Vector3(-transitionDirection.z, 0f, transitionDirection.x);
 
-                normals[baseIndex] = normalDirection.normalized;
-                normals[baseIndex + 1] = normalDirection.normalized;
+                normals[baseIndex] = normalDirection.normalized + Vector3.down;
+                normals[baseIndex + 1] = normalDirection.normalized + Vector3.up;
 
                 // Set tangent data
                 Vector3 tangentDirection = Vector3.Cross(normalDirection, transitionDirection);
@@ -87,12 +88,27 @@ public class LevelBlock : MonoBehaviour {
                 tangents[baseIndex + 1] = half4(half3(tangentDirection.normalized), half(-1f));
 
                 // Set triangle index data
-                triangleIndices[baseTriangleIndex] = Convert.ToUInt16((2 * i) % vertexCount);
-                triangleIndices[baseTriangleIndex + 1] = Convert.ToUInt16(((2 * i) + 2) % vertexCount);
-                triangleIndices[baseTriangleIndex + 2] = Convert.ToUInt16(((2 * i) + 1) % vertexCount);
-                triangleIndices[baseTriangleIndex + 3] = Convert.ToUInt16(((2 * i) + 2) % vertexCount);
-                triangleIndices[baseTriangleIndex + 4] = Convert.ToUInt16(((2 * i) + 3) % vertexCount);
-                triangleIndices[baseTriangleIndex + 5] = Convert.ToUInt16(((2 * i) + 1) % vertexCount);
+                // Sides
+                triangleIndices[baseSideTriangleIndex] = Convert.ToUInt16((2 * i) % vertexCount);
+                triangleIndices[baseSideTriangleIndex + 1] = Convert.ToUInt16(((2 * i) + 2) % vertexCount);
+                triangleIndices[baseSideTriangleIndex + 2] = Convert.ToUInt16(((2 * i) + 1) % vertexCount);
+                triangleIndices[baseSideTriangleIndex + 3] = Convert.ToUInt16(((2 * i) + 2) % vertexCount);
+                triangleIndices[baseSideTriangleIndex + 4] = Convert.ToUInt16(((2 * i) + 3) % vertexCount);
+                triangleIndices[baseSideTriangleIndex + 5] = Convert.ToUInt16(((2 * i) + 1) % vertexCount);
+
+                // Bottom
+                if (i >= 2) {
+                    triangleIndices[baseCapTriangleIndex] = Convert.ToUInt16(0);
+                    triangleIndices[baseCapTriangleIndex + 1] = Convert.ToUInt16(2 * i);
+                    triangleIndices[baseCapTriangleIndex + 2] = Convert.ToUInt16(2 * (i - 1));
+                }
+
+                // Top
+                if (i >= 2) {
+                    triangleIndices[baseCapTriangleIndex + 3] = Convert.ToUInt16(1);
+                    triangleIndices[baseCapTriangleIndex + 4] = Convert.ToUInt16((2 * (i - 1)) + 1);
+                    triangleIndices[baseCapTriangleIndex + 5] = Convert.ToUInt16((2 * i) + 1);
+                }
 
                 // Update bounds based on point
                 if (points[i].x < xBounds.x) xBounds.x = points[i].x;
