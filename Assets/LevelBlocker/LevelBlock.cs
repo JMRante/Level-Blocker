@@ -27,6 +27,8 @@ public class LevelBlock : MonoBehaviour {
 
     void Update() {
         if (dirtyMesh) {
+            LevelBlockData geometryData = new LevelBlockData(points);
+
             // Mesh data sizes
             int vertexAttributeCount = 3;
             int vertexCount = points.Length * 2;
