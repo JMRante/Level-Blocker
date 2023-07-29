@@ -23,6 +23,13 @@ public class LevelBlockData
 
         int nPointsInPolygonChain = points.Length * 3;
 
+        // Calculate data section sizes
+        int sideSectionDataSize = 12;
+        int sideDataSize = points.Length * sideSectionDataSize; 
+
+        int capBorderSectionDataSize = 6;
+        int capBorderDataSize = points.Length * capBorderSectionDataSize;
+
         // Init vertex/triangle lists and polygon vertex chains
         triangles = new List<Triangle>(nTrianglesInBlock + nTrianglesInQuads);
         vertices = new List<Vertex>(triangles.Capacity * 3);
@@ -34,7 +41,7 @@ public class LevelBlockData
         Vector3 offset3 = (Vector3.up * topHeight) + (Vector3.down * virtualBevelHalfWidth);
         Vector3 offset4 = Vector3.up * topHeight;
 
-        // Create all vertexes
+        // Create main side vertexes
         for (int i = 0; i < points.Length; i++) {
             int baseIndex = i * 12;
 
@@ -118,14 +125,6 @@ public class LevelBlockData
             vertexC3.Tangent = tangentDirectionBC.normalized;
             vertexC4.Tangent = tangentDirectionBC.normalized;
 
-            // Column D
-            // Vector3 columnDAnchorPoint = anchorPoint - (normalDirection * virtualBevelHalfWidth);
-
-            // Column E
-            // Vector3 columnEAnchorPoint = columnDAnchorPoint;
-
-            // Column F
-
             // Add vertices to list
             vertices.Add(vertexA1);
             vertices.Add(vertexA2);
@@ -149,19 +148,114 @@ public class LevelBlockData
             if (points[i].z > zBounds.y) zBounds.y = points[i].z;
         }
 
-        // Create triangles from vertices
+        // Create border vertices
         for (int i = 0; i < points.Length; i++) {
             int baseIndex = i * 12;
 
+            // Get base vertices to extend from
+            Vertex baseVertexA = vertices[baseIndex % sideDataSize];
+            Vertex baseVertexB = vertices[(baseIndex + 4) % sideDataSize];
+            Vertex baseVertexC = vertices[(baseIndex + 8) % sideDataSize];
+            Vertex baseVertexD = vertices[(baseIndex + 12) % sideDataSize];
+
+            // Calculate extension points
+            Vector3 innerPointA = baseVertexA.Position - ((baseVertexA.Normal - Vector3.down) * virtualBevelHalfWidth);
+            Vector3 innerPointD = baseVertexD.Position - ((baseVertexD.Normal - Vector3.down) * virtualBevelHalfWidth);
+
+            Vector3 innerSide = innerPointD - innerPointA;
+            
+            Vector3 innerPointB = innerPointA + (innerSide.normalized * virtualBevelHalfWidth);
+            Vector3 innerPointC = innerPointA + (innerSide - (innerSide.normalized * virtualBevelHalfWidth));
+
+            // Bottom border vertices
+            // Calculate normal and tangent
+            Vector3 bottomNormal = Vector3.down;
+            Vector3 bottomTangent = Vector3.Cross(bottomNormal, innerSide.normalized);
+
+            Vertex bottomInnerVertexA = new Vertex(innerPointA);
+            Vertex bottomInnerVertexB = new Vertex(innerPointB);
+            Vertex bottomInnerVertexC = new Vertex(innerPointC);
+
+            bottomInnerVertexA.Normal = bottomNormal;
+            bottomInnerVertexB.Normal = bottomNormal;
+            bottomInnerVertexC.Normal = bottomNormal;
+
+            bottomInnerVertexA.Tangent = bottomTangent;
+            bottomInnerVertexB.Tangent = bottomTangent;
+            bottomInnerVertexC.Tangent = bottomTangent;
+
+            bottomInnerVertexA.Index = vertices.Count;
+            vertices.Add(bottomInnerVertexA);
+            bottomInnerVertexB.Index = vertices.Count;
+            vertices.Add(bottomInnerVertexB);
+            bottomInnerVertexC.Index = vertices.Count;
+            vertices.Add(bottomInnerVertexC);
+
+            bottomPolygonVertexChain.Add(bottomInnerVertexA);
+            bottomPolygonVertexChain.Add(bottomInnerVertexB);
+            bottomPolygonVertexChain.Add(bottomInnerVertexC);
+
+            // Top border vertices
+            // Calculate normal and tangent
+            Vector3 topNormal = Vector3.down;
+            Vector3 topTangent = Vector3.Cross(topNormal, innerSide.normalized);
+
+            Vertex topInnerVertexA = new Vertex(innerPointA + (offset4 - offset1));
+            Vertex topInnerVertexB = new Vertex(innerPointB + (offset4 - offset1));
+            Vertex topInnerVertexC = new Vertex(innerPointC + (offset4 - offset1));
+
+            topInnerVertexA.Normal = topNormal;
+            topInnerVertexB.Normal = topNormal;
+            topInnerVertexC.Normal = topNormal;
+
+            topInnerVertexA.Tangent = topTangent;
+            topInnerVertexB.Tangent = topTangent;
+            topInnerVertexC.Tangent = topTangent;
+
+            topInnerVertexA.Index = vertices.Count;
+            vertices.Add(topInnerVertexA);
+            topInnerVertexB.Index = vertices.Count;
+            vertices.Add(topInnerVertexB);
+            topInnerVertexC.Index = vertices.Count;
+            vertices.Add(topInnerVertexC);
+        }
+
+        // Create triangles from vertices
+        // Create side triangles
+        for (int i = 0; i < points.Length; i++) {
+            int baseIndex = i * sideSectionDataSize;
+
             for (int j = 0; j < 12; j += 4) {
                 for (int k = 0; k < 3; k++) {
-                    Vertex vertexSE = vertices[(baseIndex + k + j) % vertices.Count];
-                    Vertex vertexSW = vertices[(baseIndex + k + j + 4) % vertices.Count];
-                    Vertex vertexNW = vertices[(baseIndex + k + j + 5) % vertices.Count];
-                    Vertex vertexNE = vertices[(baseIndex + k + j + 1) % vertices.Count];
+                    Vertex vertexSE = vertices[(baseIndex + k + j) % sideDataSize];
+                    Vertex vertexSW = vertices[(baseIndex + k + j + 4) % sideDataSize];
+                    Vertex vertexNW = vertices[(baseIndex + k + j + 5) % sideDataSize];
+                    Vertex vertexNE = vertices[(baseIndex + k + j + 1) % sideDataSize];
 
                     triangles.Add(new Triangle(vertexSE, vertexSW, vertexNE));
                     triangles.Add(new Triangle(vertexSW, vertexNW, vertexNE));
+                }
+            }
+        }
+
+        // Create bottom and top border triangles
+        for (int i = 0; i < points.Length; i++) {
+            int baseIndex = i * sideSectionDataSize;
+
+            for (int j = 0; j < 2; j++) {
+                for (int k = 0; k < 3; k++) {
+                    Vertex vertexSE = vertices[(baseIndex + (k * 4) + (j * 3)) % sideDataSize];
+                    Vertex vertexSW = vertices[(baseIndex + (k * 4) + (j * 3) + 4) % sideDataSize];
+                    Vertex vertexNW = vertices[sideDataSize + (((i * capBorderSectionDataSize) + ((k == 2 ? k + 4 : k + 1) + (j * 3))) % capBorderDataSize)];
+                    Vertex vertexNE = vertices[sideDataSize + (((i * capBorderSectionDataSize) + ((k + (j * 3)))) % capBorderDataSize)];
+
+                    if (j == 0) {
+                        triangles.Add(new Triangle(vertexSW, vertexSE, vertexNE));
+                        triangles.Add(new Triangle(vertexNW, vertexSW, vertexNE));
+                    } else {
+                        triangles.Add(new Triangle(vertexSE, vertexSW, vertexNE));
+                        triangles.Add(new Triangle(vertexSW, vertexNW, vertexNE));
+                    }
                 }
             }
         }
