@@ -2,9 +2,9 @@ using UnityEngine;
 
 public class Triangle
 {
-    private Vertex VertexA { get; set; }
-    private Vertex VertexB { get; set; }
-    private Vertex VertexC { get; set; }
+    public Vertex VertexA { get; set; }
+    public Vertex VertexB { get; set; }
+    public Vertex VertexC { get; set; }
 
     public Triangle(Vector3 positionA, Vector3 positionB, Vector3 positionC) {
         VertexA = new Vertex(positionA);

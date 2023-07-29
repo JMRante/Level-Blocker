@@ -15,8 +15,7 @@ public class LevelBlock : MonoBehaviour {
     public float bottomHeight = -2f; 
     public float topHeight = 2f;
 
-    private Vector2 xBounds = new Vector2(-2, 2);
-    private Vector2 zBounds = new Vector2(-2, 2);
+    public float virtualBevelHalfWidth = 0.1f;
 
     public Vector3[] points = new Vector3[] {
         new Vector3(2f, 0f, 2f),
@@ -27,12 +26,12 @@ public class LevelBlock : MonoBehaviour {
 
     void Update() {
         if (dirtyMesh) {
-            LevelBlockData geometryData = new LevelBlockData(points);
+            LevelBlockData geometryData = new LevelBlockData(points, bottomHeight, topHeight, virtualBevelHalfWidth);
 
             // Mesh data sizes
             int vertexAttributeCount = 3;
-            int vertexCount = points.Length * 2;
-            int triangleIndexCount = (points.Length * 6) + ((points.Length - 2) * 3 * 2); // Side triangle count first, then top triangle count doubled to include bottom
+            int vertexCount = geometryData.vertices.Count;
+            int triangleIndexCount = geometryData.triangles.Count * 3;
 
             // Mesh data schema creation and allocation
             Mesh.MeshDataArray meshDataArray = Mesh.AllocateWritableMeshData(1);
@@ -59,67 +58,24 @@ public class LevelBlock : MonoBehaviour {
             meshData.SetIndexBufferParams(triangleIndexCount, IndexFormat.UInt16);
             NativeArray<ushort> triangleIndices = meshData.GetIndexData<ushort>();
 
-            for (int i = 0; i < points.Length; i++) {
-                int baseIndex = i * 2;
-                int baseSideTriangleIndex = i * 6;
-                int baseCapTriangleIndex = (points.Length * 6) + ((i - 2) * 3 * 2);
-                
-                // Set position data
-                Vector3 bottomPoint = (Vector3.up * bottomHeight) + points[i];
-                Vector3 topPoint = (Vector3.up * topHeight) + points[i];
+            for (int i = 0; i < geometryData.vertices.Count; i++) {
+                Vertex vertex = geometryData.vertices[i];
 
-                positions[baseIndex] = bottomPoint;
-                positions[baseIndex + 1] = topPoint;
-
-                // Set normal data
-                // Get vector between previous point and next point
-                Vector3 previousPoint = points[(i - 1 == -1 ? points.Length - 1 : i - 1)];
-                Vector3 nextPoint = points[(i + 1) % points.Length];
-                Vector3 transitionDirection = nextPoint - previousPoint;
-
-                // Get left hand perpendicular vector to the above
-                Vector3 normalDirection = new Vector3(-transitionDirection.z, 0f, transitionDirection.x);
-
-                normals[baseIndex] = normalDirection.normalized + Vector3.down;
-                normals[baseIndex + 1] = normalDirection.normalized + Vector3.up;
-
-                // Set tangent data
-                Vector3 tangentDirection = Vector3.Cross(normalDirection, transitionDirection);
-
-                tangents[baseIndex] = half4(half3(tangentDirection.normalized), half(-1f));
-                tangents[baseIndex + 1] = half4(half3(tangentDirection.normalized), half(-1f));
-
-                // Set triangle index data
-                // Sides
-                triangleIndices[baseSideTriangleIndex] = Convert.ToUInt16((2 * i) % vertexCount);
-                triangleIndices[baseSideTriangleIndex + 1] = Convert.ToUInt16(((2 * i) + 2) % vertexCount);
-                triangleIndices[baseSideTriangleIndex + 2] = Convert.ToUInt16(((2 * i) + 1) % vertexCount);
-                triangleIndices[baseSideTriangleIndex + 3] = Convert.ToUInt16(((2 * i) + 2) % vertexCount);
-                triangleIndices[baseSideTriangleIndex + 4] = Convert.ToUInt16(((2 * i) + 3) % vertexCount);
-                triangleIndices[baseSideTriangleIndex + 5] = Convert.ToUInt16(((2 * i) + 1) % vertexCount);
-
-                // Bottom
-                if (i >= 2) {
-                    triangleIndices[baseCapTriangleIndex] = Convert.ToUInt16(0);
-                    triangleIndices[baseCapTriangleIndex + 1] = Convert.ToUInt16(2 * i);
-                    triangleIndices[baseCapTriangleIndex + 2] = Convert.ToUInt16(2 * (i - 1));
-                }
-
-                // Top
-                if (i >= 2) {
-                    triangleIndices[baseCapTriangleIndex + 3] = Convert.ToUInt16(1);
-                    triangleIndices[baseCapTriangleIndex + 4] = Convert.ToUInt16((2 * (i - 1)) + 1);
-                    triangleIndices[baseCapTriangleIndex + 5] = Convert.ToUInt16((2 * i) + 1);
-                }
-
-                // Update bounds based on point
-                if (points[i].x < xBounds.x) xBounds.x = points[i].x;
-                if (points[i].x > xBounds.y) xBounds.y = points[i].x;
-                if (points[i].z < zBounds.x) zBounds.x = points[i].z;
-                if (points[i].z > zBounds.y) zBounds.y = points[i].z;
+                positions[i] = vertex.Position;
+                normals[i] = vertex.Normal;
+                tangents[i] = half4(half3(vertex.Tangent), half(-1f));
             }
 
-            Bounds bounds = new Bounds(transform.position, new Vector3(xBounds.y - xBounds.x, topHeight - bottomHeight, zBounds.y - zBounds.x));
+            for (int i = 0; i < geometryData.triangles.Count; i++) {
+                Triangle triangle = geometryData.triangles[i];
+                int baseIndex = i * 3;
+
+                triangleIndices[baseIndex] = Convert.ToUInt16(triangle.VertexA.Index);
+                triangleIndices[baseIndex + 1] = Convert.ToUInt16(triangle.VertexB.Index);
+                triangleIndices[baseIndex + 2] = Convert.ToUInt16(triangle.VertexC.Index);
+            }
+
+            Bounds bounds = new Bounds(transform.position, new Vector3(geometryData.xBounds.y - geometryData.xBounds.x, topHeight - bottomHeight, geometryData.zBounds.y - geometryData.zBounds.x));
 
             meshData.subMeshCount = 1;
             meshData.SetSubMesh(0, new SubMeshDescriptor(0, triangleIndexCount){

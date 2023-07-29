@@ -17,6 +17,9 @@ public class Vertex
     }
     private Vector2 topDownPosition;
 
+    public Vector3 Normal { get; set; }
+    public Vector3 Tangent { get; set; }
+
     public Triangle Triangle { get; set; }
 
     public Vertex PreviousVertex { get; set; }
@@ -26,7 +29,14 @@ public class Vertex
     public bool IsConvex { get; set; }
     public bool IsEar { get; set; }
 
+    public int Index { get; set; }
+
     public Vertex(Vector3 position) {
         Position = position;
+    }
+
+    public Vertex(Vector3 position, int index) {
+        Position = position;
+        Index = index;
     }
 }
