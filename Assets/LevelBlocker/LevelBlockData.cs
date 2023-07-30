@@ -33,7 +33,9 @@ public class LevelBlockData
         // Init vertex/triangle lists and polygon vertex chains
         triangles = new List<Triangle>(nTrianglesInBlock + nTrianglesInQuads);
         vertices = new List<Vertex>(triangles.Capacity * 3);
+
         List<Vertex> bottomPolygonVertexChain = new List<Vertex>(nPointsInPolygonChain);
+        List<Vertex> earVertices = new List<Vertex>(nPointsInPolygonChain);
 
         // Precalculate vertex side point height offsets
         Vector3 offset1 = Vector3.up * bottomHeight;
@@ -197,7 +199,7 @@ public class LevelBlockData
 
             // Top border vertices
             // Calculate normal and tangent
-            Vector3 topNormal = Vector3.down;
+            Vector3 topNormal = Vector3.up;
             Vector3 topTangent = Vector3.Cross(topNormal, innerSide.normalized);
 
             Vertex topInnerVertexA = new Vertex(innerPointA + (offset4 - offset1));
@@ -218,6 +220,16 @@ public class LevelBlockData
             vertices.Add(topInnerVertexB);
             topInnerVertexC.Index = vertices.Count;
             vertices.Add(topInnerVertexC);
+
+            // Set siblings
+            bottomInnerVertexA.Sibling = topInnerVertexA;
+            topInnerVertexA.Sibling = bottomInnerVertexA;
+
+            bottomInnerVertexB.Sibling = topInnerVertexB;
+            topInnerVertexB.Sibling = bottomInnerVertexB;
+
+            bottomInnerVertexC.Sibling = topInnerVertexC;
+            topInnerVertexC.Sibling = bottomInnerVertexC;
         }
 
         // Create triangles from vertices
@@ -259,5 +271,195 @@ public class LevelBlockData
                 }
             }
         }
+
+        // Ear clipping polygon triangulation for caps
+        // If only 3 points exist, only one triangle must be made, so skip complicated code
+        if (bottomPolygonVertexChain.Count == 3) {
+            // Bottom
+            Vertex vertexA = bottomPolygonVertexChain[0];
+            Vertex vertexB = bottomPolygonVertexChain[1];
+            Vertex vertexC = bottomPolygonVertexChain[2];
+
+            triangles.Add(new Triangle(vertexA, vertexC, vertexB));
+
+            // Top
+            vertexA = bottomPolygonVertexChain[0].Sibling;
+            vertexB = bottomPolygonVertexChain[1].Sibling;
+            vertexC = bottomPolygonVertexChain[2].Sibling;
+
+            triangles.Add(new Triangle(vertexA, vertexB, vertexC));
+        }
+        
+        // Chain together border vertices for triangulation
+        bool isPolygonConcave = false;
+
+	    for (int i = 0; i < bottomPolygonVertexChain.Count; i++) {
+            int nextPos = ClampListIndex(i + 1, bottomPolygonVertexChain.Count);
+            int prevPos = ClampListIndex(i - 1, bottomPolygonVertexChain.Count);
+
+            bottomPolygonVertexChain[i].PreviousVertex = bottomPolygonVertexChain[prevPos];
+            bottomPolygonVertexChain[i].NextVertex = bottomPolygonVertexChain[nextPos];
+
+            bottomPolygonVertexChain[i].Sibling.PreviousVertex = bottomPolygonVertexChain[prevPos].Sibling;
+            bottomPolygonVertexChain[i].Sibling.NextVertex = bottomPolygonVertexChain[nextPos].Sibling;
+
+            CheckAndSetIfReflexOrConvex(bottomPolygonVertexChain[i]);
+
+            if (bottomPolygonVertexChain[i].IsConvex) {
+                isPolygonConcave = true;
+            }
+        }
+
+        // If polygon is concave, use simpler calculation
+        if (isPolygonConcave) {
+            for (int i = 2; i < bottomPolygonVertexChain.Count; i++) {
+                // Bottom
+                Vertex a = bottomPolygonVertexChain[0];
+                Vertex b = bottomPolygonVertexChain[i - 1];
+                Vertex c = bottomPolygonVertexChain[i];
+
+                triangles.Add(new Triangle(a, c, b));
+
+                // Top
+                a = bottomPolygonVertexChain[0].Sibling;
+                b = bottomPolygonVertexChain[i - 1].Sibling;
+                c = bottomPolygonVertexChain[i].Sibling;
+
+                triangles.Add(new Triangle(a, b, c));
+            }
+        } else {
+            // Build initial ear list
+            for (int i = 0; i < bottomPolygonVertexChain.Count; i++) {
+		        IsVertexEar(bottomPolygonVertexChain[i], bottomPolygonVertexChain, earVertices);
+	        }
+
+            // Build triangles
+            while (bottomPolygonVertexChain.Count > 2) {
+                // This means we have just one triangle left
+                if (bottomPolygonVertexChain.Count == 3) {
+                    // The final triangle
+                    // Bottom
+                    triangles.Add(new Triangle(bottomPolygonVertexChain[0], bottomPolygonVertexChain[0].NextVertex, bottomPolygonVertexChain[0].PreviousVertex));
+
+                    // Top
+                    triangles.Add(new Triangle(bottomPolygonVertexChain[0].Sibling, bottomPolygonVertexChain[0].Sibling.PreviousVertex, bottomPolygonVertexChain[0].Sibling.NextVertex));
+
+                    break;
+                }
+
+                // Make a triangle of the first ear
+                Vertex earVertex = earVertices[0];
+
+                Vertex earVertexPrev = earVertex.PreviousVertex;
+                Vertex earVertexNext = earVertex.NextVertex;
+
+                // Bottom
+                Triangle newBottomTriangle = new Triangle(earVertex, earVertexNext, earVertexPrev);
+                triangles.Add(newBottomTriangle);
+
+                // Top
+                Triangle newTopTriangle = new Triangle(earVertex.Sibling, earVertexPrev.Sibling, earVertexNext.Sibling);
+                triangles.Add(newTopTriangle);
+
+                // Remove the vertex from the lists
+                earVertices.Remove(earVertex);
+                bottomPolygonVertexChain.Remove(earVertex);
+
+                // Update the previous vertex and next vertex
+                earVertexPrev.NextVertex = earVertexNext;
+                earVertexNext.PreviousVertex = earVertexPrev;
+
+                // ...see if we have found a new ear by investigating the two vertices that was part of the ear
+                CheckAndSetIfReflexOrConvex(earVertexPrev);
+                CheckAndSetIfReflexOrConvex(earVertexNext);
+
+                earVertices.Remove(earVertexPrev);
+                earVertices.Remove(earVertexNext);
+
+                IsVertexEar(earVertexPrev, vertices, earVertices);
+                IsVertexEar(earVertexNext, vertices, earVertices);
+            }
+        }
+    }
+
+    private static int ClampListIndex(int index, int listSize) {
+        index = ((index % listSize) + listSize) % listSize;
+        return index;
+    }
+
+    private static void CheckAndSetIfReflexOrConvex(Vertex v) {
+        v.IsReflex = false;
+        v.IsConvex = false;
+
+        // This is a reflex vertex if its triangle is oriented clockwise
+        Vector2 a = v.PreviousVertex.TopDownPosition;
+        Vector2 b = v.TopDownPosition;
+        Vector2 c = v.NextVertex.TopDownPosition;
+
+        if (IsTriangleOrientedClockwise(a, b, c)) {
+            v.IsReflex = true;
+        } else {
+            v.IsConvex = true;
+        }
+    }
+
+    private static bool IsTriangleOrientedClockwise(Vector2 p1, Vector2 p2, Vector2 p3) {
+        bool isClockWise = true;
+        float determinant = p1.x * p2.y + p3.x * p1.y + p2.x * p3.y - p1.x * p3.y - p3.x * p2.y - p2.x * p1.y;
+
+        if (determinant > 0f) {
+            isClockWise = false;
+        }
+
+        return isClockWise;
+    }
+
+    private static void IsVertexEar(Vertex v, List<Vertex> vertices, List<Vertex> earVertices) {
+        // A reflex vertex cant be an ear!
+        if (v.IsReflex) {
+            return;
+        }
+
+        // This triangle to check point in triangle
+        Vector2 a = v.PreviousVertex.TopDownPosition;
+        Vector2 b = v.TopDownPosition;
+        Vector2 c = v.NextVertex.TopDownPosition;
+
+        bool hasPointInside = false;
+
+        for (int i = 0; i < vertices.Count; i++) {
+            // We only need to check if a reflex vertex is inside of the triangle
+            if (vertices[i].IsReflex) {
+                Vector2 p = vertices[i].TopDownPosition;
+
+                // This means inside and not on the hull
+                if (IsPointInTriangle(a, b, c, p)) {
+                    hasPointInside = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasPointInside) {
+            earVertices.Add(v);
+        }
+    }
+
+    private static bool IsPointInTriangle(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p) {
+        bool isWithinTriangle = false;
+
+        // Based on Barycentric coordinates
+        float denominator = ((p2.y - p3.y) * (p1.x - p3.x) + (p3.x - p2.x) * (p1.y - p3.y));
+
+        float a = ((p2.y - p3.y) * (p.x - p3.x) + (p3.x - p2.x) * (p.y - p3.y)) / denominator;
+        float b = ((p3.y - p1.y) * (p.x - p3.x) + (p1.x - p3.x) * (p.y - p3.y)) / denominator;
+        float c = 1 - a - b;
+
+        // The point is within the triangle
+        if (a > 0f && a < 1f && b > 0f && b < 1f && c > 0f && c < 1f) {
+            isWithinTriangle = true;
+        }
+
+        return isWithinTriangle;
     }
 }

@@ -31,6 +31,8 @@ public class Vertex
 
     public int Index { get; set; }
 
+    public Vertex Sibling { get; set; }
+
     public Vertex(Vector3 position) {
         Position = position;
     }
