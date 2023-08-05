@@ -296,7 +296,7 @@ public class LevelBlockData
 
             CheckAndSetIfReflexOrConvex(bottomPolygonVertexChain[i]);
 
-            if (bottomPolygonVertexChain[i].IsConvex) {
+            if (bottomPolygonVertexChain[i].IsReflex) {
                 isPolygonConcave = true;
             }
         }
