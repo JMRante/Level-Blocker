@@ -15,6 +15,7 @@ public class LevelBlock : MonoBehaviour {
     public float bottomHeight = -2f; 
     public float topHeight = 2f;
 
+    [Range(0.001f, 0.5f)]
     public float virtualBevelHalfWidth = 0.1f;
 
     public Vector3[] points = new Vector3[] {
