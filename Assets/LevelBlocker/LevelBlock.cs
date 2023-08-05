@@ -28,6 +28,27 @@ public class LevelBlock : MonoBehaviour {
         if (dirtyMesh) {
             LevelBlockData geometryData = new LevelBlockData(points, bottomHeight, topHeight, virtualBevelHalfWidth);
 
+            // For calculating bounds
+            Vector3 boundingCenter = Vector3.zero;
+            Vector3 boundingSize = Vector3.zero;
+
+            Vector3 maxBoundPoint = Vector3.zero;
+            Vector3 minBoundPoint = Vector3.zero;
+
+            foreach (Vector3 point in points) {
+                if (point.x > maxBoundPoint.x) maxBoundPoint.x = point.x;
+                if (point.x < minBoundPoint.x) minBoundPoint.x = point.x;
+
+                if (point.z > maxBoundPoint.z) maxBoundPoint.z = point.z;
+                if (point.z < minBoundPoint.z) minBoundPoint.z = point.z;
+            }
+
+            maxBoundPoint.y = topHeight;
+            minBoundPoint.y = bottomHeight;
+
+            boundingSize = maxBoundPoint - minBoundPoint;
+            boundingCenter = (minBoundPoint + maxBoundPoint) / 2f;
+
             // Mesh data sizes
             int vertexAttributeCount = 3;
             int vertexCount = geometryData.vertices.Count;
@@ -75,7 +96,7 @@ public class LevelBlock : MonoBehaviour {
                 triangleIndices[baseIndex + 2] = Convert.ToUInt16(triangle.VertexC.Index);
             }
 
-            Bounds bounds = new Bounds(transform.position, new Vector3(geometryData.xBounds.y - geometryData.xBounds.x, topHeight - bottomHeight, geometryData.zBounds.y - geometryData.zBounds.x));
+            Bounds bounds = new Bounds(boundingCenter, boundingSize);
 
             meshData.subMeshCount = 1;
             meshData.SetSubMesh(0, new SubMeshDescriptor(0, triangleIndexCount){
@@ -95,6 +116,15 @@ public class LevelBlock : MonoBehaviour {
             dirtyMesh = false;
         }
 	}
+
+    // Render bounds
+    // void OnDrawGizmos()
+    // {
+    //     MeshFilter mf = GetComponent<MeshFilter>();
+
+    //     Gizmos.color = new Color(0, 0, 1, 0.5f);
+    //     Gizmos.DrawCube(transform.position + mf.sharedMesh.bounds.center, mf.sharedMesh.bounds.extents * 2);
+    // }
 }
 
 [CustomEditor(typeof(LevelBlock))]
@@ -224,6 +254,8 @@ public class LevelBlockEditor : Editor
         Handles.color = Color.magenta;
         centerOfMass = centerOfMass / (float) points.arraySize;
 
+        // Calculate bounds
+
         // Bottom height slider
         EditorGUI.BeginChangeCheck();
         Vector3 newBottomPosition = Handles.Slider(centerOfMass + (Vector3.up * bottomHeight.floatValue), Vector3.down, 3f, Handles.ArrowHandleCap, 1f);
@@ -247,6 +279,8 @@ public class LevelBlockEditor : Editor
         }
 
         serializedObject.ApplyModifiedProperties();
+
+        Handles.matrix = Matrix4x4.identity;
     }
 
     void UndoRedoLevelBlockCallback()

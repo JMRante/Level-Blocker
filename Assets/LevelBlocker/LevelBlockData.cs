@@ -6,9 +6,6 @@ public class LevelBlockData
     public List<Vertex> vertices;
     public List<Triangle> triangles;
 
-    public Vector2 xBounds = new Vector2(-2, 2);
-    public Vector2 zBounds = new Vector2(-2, 2);
-
     public LevelBlockData(Vector3[] points, float bottomHeight, float topHeight, float virtualBevelHalfWidth) {
         // Calculate Quad Triangle counts for border sections
         int nQuadsInSide = 9;
@@ -142,12 +139,6 @@ public class LevelBlockData
             vertices.Add(vertexC2);
             vertices.Add(vertexC3);
             vertices.Add(vertexC4);
-
-            // Update bounds based on point
-            if (points[i].x < xBounds.x) xBounds.x = points[i].x;
-            if (points[i].x > xBounds.y) xBounds.y = points[i].x;
-            if (points[i].z < zBounds.x) zBounds.x = points[i].z;
-            if (points[i].z > zBounds.y) zBounds.y = points[i].z;
         }
 
         // Create border vertices
@@ -334,7 +325,7 @@ public class LevelBlockData
 	        }
 
             // Build triangles
-            while (bottomPolygonVertexChain.Count > 2) {
+            while (bottomPolygonVertexChain.Count > 2 && earVertices.Count > 0) {
                 // This means we have just one triangle left
                 if (bottomPolygonVertexChain.Count == 3) {
                     // The final triangle
