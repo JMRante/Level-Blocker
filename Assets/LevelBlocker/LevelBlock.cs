@@ -32,8 +32,8 @@ public class LevelBlock : MonoBehaviour {
             Vector3 boundingCenter = Vector3.zero;
             Vector3 boundingSize = Vector3.zero;
 
-            Vector3 maxBoundPoint = Vector3.zero;
-            Vector3 minBoundPoint = Vector3.zero;
+            Vector3 maxBoundPoint = points[0];
+            Vector3 minBoundPoint = points[0];
 
             foreach (Vector3 point in points) {
                 if (point.x > maxBoundPoint.x) maxBoundPoint.x = point.x;
