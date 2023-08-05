@@ -149,7 +149,7 @@ public class LevelBlockEditor : Editor
                 // Point position handles
                 EditorGUI.BeginChangeCheck();
                         
-                Handles.color = Color.red;
+                Handles.color = Color.magenta;
                 Vector3 newPointPosition = Handles.Slider2D(heightOffset + points.GetArrayElementAtIndex(j).vector3Value, Vector3.up, Vector3.forward, Vector3.right, 0.3f, Handles.CubeHandleCap, 1f);
                 worldPositionPoints[j] = newPointPosition;
 
@@ -172,7 +172,7 @@ public class LevelBlockEditor : Editor
                 Vector3 midPointPosition = Vector3.Lerp(points.GetArrayElementAtIndex(nextPointIndex).vector3Value, points.GetArrayElementAtIndex(j).vector3Value, 0.5f);
 
                 // Line merge handles
-                Handles.color = Color.green;
+                Handles.color = Color.red;
 
                 if (Handles.Button(heightOffset + midPointPosition + (Vector3.up * 0.25f), Quaternion.Euler(90f, 0f, 0f), 0.15f, 0.15f, Handles.ConeHandleCap)) {
                     Undo.RecordObject(block, "Merge Between Two Points");
@@ -182,7 +182,7 @@ public class LevelBlockEditor : Editor
                 }                
 
                 // Line split handles
-                Handles.color = Color.blue;
+                Handles.color = Color.green;
                 
                 if (Handles.Button(heightOffset + midPointPosition, Quaternion.identity, 0.2f, 0.2f, Handles.SphereHandleCap)) {
                     Undo.RecordObject(block, "Split Between Two Points");
@@ -194,9 +194,6 @@ public class LevelBlockEditor : Editor
                 if (i == 0) {
                     centerOfMass += points.GetArrayElementAtIndex(j).vector3Value;
                 }
-
-                Handles.color = Color.black;
-                Handles.Label(heightOffset + points.GetArrayElementAtIndex(j).vector3Value, j.ToString());
             } 
 
             // If a merge occured, apply it after the loop through of points
@@ -219,7 +216,7 @@ public class LevelBlockEditor : Editor
             }
 
             // Draw outline of shape the points create
-            Handles.color = new Color(1f, 0f, 0f, 0.4f);
+            Handles.color = Color.magenta;
             Handles.DrawAAPolyLine(10f, worldPositionPoints);
         }
 
