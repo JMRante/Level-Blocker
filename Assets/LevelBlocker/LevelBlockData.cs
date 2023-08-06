@@ -263,24 +263,6 @@ public class LevelBlockData
             }
         }
 
-        // Ear clipping polygon triangulation for caps
-        // If only 3 points exist, only one triangle must be made, so skip complicated code
-        if (bottomPolygonVertexChain.Count == 3) {
-            // Bottom
-            Vertex vertexA = bottomPolygonVertexChain[0];
-            Vertex vertexB = bottomPolygonVertexChain[1];
-            Vertex vertexC = bottomPolygonVertexChain[2];
-
-            triangles.Add(new Triangle(vertexA, vertexC, vertexB));
-
-            // Top
-            vertexA = bottomPolygonVertexChain[0].Sibling;
-            vertexB = bottomPolygonVertexChain[1].Sibling;
-            vertexC = bottomPolygonVertexChain[2].Sibling;
-
-            triangles.Add(new Triangle(vertexA, vertexB, vertexC));
-        }
-        
         // Chain together border vertices for triangulation
         bool isPolygonConcave = false;
 
@@ -302,21 +284,21 @@ public class LevelBlockData
         }
 
         // If polygon is concave, use simpler calculation
-        if (isPolygonConcave) {
+        if (!isPolygonConcave) {
             for (int i = 2; i < bottomPolygonVertexChain.Count; i++) {
                 // Bottom
                 Vertex a = bottomPolygonVertexChain[0];
                 Vertex b = bottomPolygonVertexChain[i - 1];
                 Vertex c = bottomPolygonVertexChain[i];
 
-                triangles.Add(new Triangle(a, c, b));
+                AddTriangleToListIfValid(triangles, new Triangle(a, c, b));
 
                 // Top
                 a = bottomPolygonVertexChain[0].Sibling;
                 b = bottomPolygonVertexChain[i - 1].Sibling;
                 c = bottomPolygonVertexChain[i].Sibling;
 
-                triangles.Add(new Triangle(a, b, c));
+                AddTriangleToListIfValid(triangles, new Triangle(a, b, c));
             }
         } else {
             // Build initial ear list
@@ -330,10 +312,10 @@ public class LevelBlockData
                 if (bottomPolygonVertexChain.Count == 3) {
                     // The final triangle
                     // Bottom
-                    triangles.Add(new Triangle(bottomPolygonVertexChain[0], bottomPolygonVertexChain[0].NextVertex, bottomPolygonVertexChain[0].PreviousVertex));
+                    AddTriangleToListIfValid(triangles, new Triangle(bottomPolygonVertexChain[0], bottomPolygonVertexChain[0].PreviousVertex, bottomPolygonVertexChain[0].NextVertex));
 
                     // Top
-                    triangles.Add(new Triangle(bottomPolygonVertexChain[0].Sibling, bottomPolygonVertexChain[0].Sibling.PreviousVertex, bottomPolygonVertexChain[0].Sibling.NextVertex));
+                    AddTriangleToListIfValid(triangles, new Triangle(bottomPolygonVertexChain[0].Sibling, bottomPolygonVertexChain[0].NextVertex.Sibling, bottomPolygonVertexChain[0].PreviousVertex.Sibling));
 
                     break;
                 }
@@ -345,12 +327,12 @@ public class LevelBlockData
                 Vertex earVertexNext = earVertex.NextVertex;
 
                 // Bottom
-                Triangle newBottomTriangle = new Triangle(earVertex, earVertexNext, earVertexPrev);
-                triangles.Add(newBottomTriangle);
+                Triangle newBottomTriangle = new Triangle(earVertex, earVertexPrev, earVertexNext);
+                AddTriangleToListIfValid(triangles, newBottomTriangle);
 
                 // Top
-                Triangle newTopTriangle = new Triangle(earVertex.Sibling, earVertexPrev.Sibling, earVertexNext.Sibling);
-                triangles.Add(newTopTriangle);
+                Triangle newTopTriangle = new Triangle(earVertex.Sibling, earVertexNext.Sibling, earVertexPrev.Sibling);
+                AddTriangleToListIfValid(triangles, newTopTriangle);
 
                 // Remove the vertex from the lists
                 earVertices.Remove(earVertex);
@@ -388,9 +370,9 @@ public class LevelBlockData
         Vector2 c = v.NextVertex.TopDownPosition;
 
         if (IsTriangleOrientedClockwise(a, b, c)) {
-            v.IsReflex = true;
+            v.IsConvex= true;
         } else {
-            v.IsConvex = true;
+            v.IsReflex = true;
         }
     }
 
@@ -452,5 +434,18 @@ public class LevelBlockData
         }
 
         return isWithinTriangle;
+    }
+    
+    // Used to not create triangles across points for 180 degree angles
+    private static void AddTriangleToListIfValid(List<Triangle> list, Triangle triangle) {
+        float triangleArea = CalculateTriangleArea(triangle.VertexA.TopDownPosition, triangle.VertexB.TopDownPosition, triangle.VertexC.TopDownPosition);
+
+        if (!triangleArea.Equals(0f)) {
+            list.Add(triangle);
+        }
+    }
+
+    private static float CalculateTriangleArea(Vector2 p1, Vector2 p2, Vector2 p3) {
+        return 0.5f * ((p1.x * (p2.y - p3.y)) + (p2.x * (p3.y - p1.y)) + (p3.x * (p1.y - p2.y)));
     }
 }
