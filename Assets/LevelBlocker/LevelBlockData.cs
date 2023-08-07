@@ -124,6 +124,20 @@ public class LevelBlockData
             vertexC3.Tangent = tangentDirectionBC.normalized;
             vertexC4.Tangent = tangentDirectionBC.normalized;
 
+            // Offset edge vertices just enough to avoid z-fighting
+            float edgeDepthOffset = 0.0005f;
+
+            vertexA1.Position -= vertexA2.Normal * edgeDepthOffset;
+            vertexA2.Position -= vertexA2.Normal * edgeDepthOffset;
+            vertexA3.Position -= vertexA3.Normal * edgeDepthOffset;
+            vertexA4.Position -= vertexA2.Normal * edgeDepthOffset;
+
+            vertexB1.Position -= vertexB1.Normal * edgeDepthOffset;
+            vertexB4.Position -= vertexB4.Normal * edgeDepthOffset;
+
+            vertexC1.Position -= vertexC1.Normal * edgeDepthOffset;
+            vertexC4.Position -= vertexC4.Normal * edgeDepthOffset;
+
             // Add vertices to list
             vertices.Add(vertexA1);
             vertices.Add(vertexA2);
