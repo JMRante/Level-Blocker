@@ -255,8 +255,6 @@ public class LevelBlockEditor : Editor
         Handles.color = Color.magenta;
         centerOfMass = centerOfMass / (float) points.arraySize;
 
-        // Calculate bounds
-
         // Bottom height slider
         EditorGUI.BeginChangeCheck();
         Vector3 newBottomPosition = Handles.Slider(centerOfMass + (Vector3.up * bottomHeight.floatValue), Vector3.down, 3f, Handles.ArrowHandleCap, 1f);
