@@ -112,6 +112,12 @@ public class LevelBlock : MonoBehaviour {
 
             Mesh.ApplyAndDisposeWritableMeshData(meshDataArray, mesh);
 
+            bool successfulLightingUVGeneration = Unwrapping.GenerateSecondaryUVSet(mesh);
+
+            if (!successfulLightingUVGeneration) {
+                Debug.LogError("Failed to generate lighting UVs");
+            }
+
             GetComponent<MeshFilter>().mesh = mesh;
 
             dirtyMesh = false;
