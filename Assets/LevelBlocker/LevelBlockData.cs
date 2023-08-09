@@ -45,7 +45,7 @@ public class LevelBlockData
             int baseIndex = i * 12;
 
             Vector3 anchorPoint = points[i];
-            Vector3 previousPoint = points[(i - 1 == -1 ? points.Length - 1 : i - 1)];
+            Vector3 previousPoint = points[i - 1 == -1 ? points.Length - 1 : i - 1];
             Vector3 nextPoint = points[(i + 1) % points.Length];
             Vector3 side = nextPoint - anchorPoint;
 
